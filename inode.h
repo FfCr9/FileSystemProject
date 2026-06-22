@@ -1,4 +1,14 @@
 #ifndef INODE_H
 #define INODE_H
+#include <QString>
 
-#endif // INODE_H
+class Inode
+{
+public:
+    int inodeID;
+    QString content;
+    int size;
+    Inode();
+};
+
+#endif

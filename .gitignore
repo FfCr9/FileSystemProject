@@ -1,5 +1,4 @@
-build*
-*.o
+build/
 *.pro.user
-*.user
-*.swp
+*.o
+*.out
