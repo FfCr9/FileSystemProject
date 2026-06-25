@@ -8,6 +8,8 @@ public:
     int inodeID;
     QString content;
     int size;
+    QString owner;
+    QString permission;
     Inode();
 };
 
