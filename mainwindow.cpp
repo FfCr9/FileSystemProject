@@ -1,15 +1,13 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-#include <QMessageBox>
-#include <QPushButton>
 #include <QInputDialog>
-
-extern FileSystem g_fs;
+#include <QMessageBox>
+#include <QTreeWidgetItem>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
+    :QMainWindow(parent)
+    ,ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
 
@@ -47,6 +45,19 @@ MainWindow::MainWindow(QWidget *parent)
         this,
         &MainWindow::searchFile
         );
+
+    ui->treeWidget->clear();
+
+    QTreeWidgetItem *root =
+        new QTreeWidgetItem;
+
+    root->setText(
+        0,
+        "root"
+        );
+
+    ui->treeWidget
+        ->addTopLevelItem(root);
 }
 
 MainWindow::~MainWindow()
@@ -54,76 +65,197 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+void MainWindow::showError()
+{
+    QString msg=
+        filesystem.lastError;
+
+    if(msg.isEmpty())
+    {
+        msg="未知错误";
+    }
+
+    QMessageBox::warning(
+        this,
+        "操作失败",
+        msg
+        );
+}
+
 void MainWindow::createFile()
 {
-    QString name = QInputDialog::getText(this,"新建文件","输入文件名");
-    if(name.isEmpty())return;
-    bool ok = g_fs.createFile(name);
+    QString filename=
+        QInputDialog::getText(
+            this,
+            "创建文件",
+            "输入文件名："
+            );
+
+    if(filename.isEmpty())
+        return;
+
+    bool ok=
+        filesystem.createFile(
+            filename
+            );
+
     if(!ok)
     {
-        QMessageBox::warning(this,"操作失败",g_fs.lastError);
+        showError();
+        return;
     }
-    else
-    {
-        QMessageBox::information(this,"提示","创建文件成功");
-    }
+
+    QTreeWidgetItem *item=
+        new QTreeWidgetItem;
+
+    item->setText(
+        0,
+        filename
+        );
+
+    ui->treeWidget
+        ->topLevelItem(0)
+        ->addChild(item);
 }
 
 void MainWindow::deleteFile()
 {
-    QString name = QInputDialog::getText(this,"删除文件","输入文件名");
-    if(name.isEmpty())return;
-    bool ok = g_fs.deleteFile(name);
+    auto item=
+        ui->treeWidget
+            ->currentItem();
+
+    if(item==nullptr)
+    {
+        QMessageBox::warning(
+            this,
+            "错误",
+            "请选择文件"
+            );
+
+        return;
+    }
+
+    QString filename=
+        item->text(0);
+
+    bool ok=
+        filesystem.deleteFile(
+            filename
+            );
+
     if(!ok)
     {
-        QMessageBox::warning(this,"操作失败",g_fs.lastError);
+        showError();
+        return;
     }
-    else
-    {
-        QMessageBox::information(this,"提示","删除文件成功");
-    }
+
+    delete item;
 }
 
 void MainWindow::createDir()
 {
-    QString name = QInputDialog::getText(this,"新建目录","输入目录名");
-    if(name.isEmpty())return;
-    bool ok = g_fs.createDirectory(name);
+    QString dirname=
+        QInputDialog::getText(
+            this,
+            "创建目录",
+            "输入目录名："
+            );
+
+    if(dirname.isEmpty())
+        return;
+
+    bool ok=
+        filesystem.createDirectory(
+            dirname
+            );
+
     if(!ok)
     {
-        QMessageBox::warning(this,"操作失败",g_fs.lastError);
+        showError();
+        return;
     }
-    else
-    {
-        QMessageBox::information(this,"提示","创建目录成功");
-    }
+
+    QTreeWidgetItem *item=
+        new QTreeWidgetItem;
+
+    item->setText(
+        0,
+        "[DIR] "+dirname
+        );
+
+    ui->treeWidget
+        ->topLevelItem(0)
+        ->addChild(item);
 }
 
 void MainWindow::saveFile()
 {
-    QString name = QInputDialog::getText(this,"写入文件","输入文件名");
-    if(name.isEmpty())return;
-    QString content = ui->textEdit->toPlainText();
-    bool ok = g_fs.writeFile(name,content);
+    QString text=
+        ui->textEdit->toPlainText();
+
+    auto item=
+        ui->treeWidget
+            ->currentItem();
+
+    if(item==nullptr)
+    {
+        QMessageBox::warning(
+            this,
+            "错误",
+            "未选择文件"
+            );
+
+        return;
+    }
+
+    QString filename=
+        item->text(0);
+
+    bool ok=
+        filesystem.writeFile(
+            filename,
+            text
+            );
+
     if(!ok)
     {
-        QMessageBox::warning(this,"操作失败",g_fs.lastError);
+        showError();
+        return;
     }
-    else
-    {
-        QMessageBox::information(this,"提示","保存文件成功");
-    }
+
+    QMessageBox::information(
+        this,
+        "成功",
+        "保存成功"
+        );
 }
 
 void MainWindow::searchFile()
 {
-    QString name = QInputDialog::getText(this,"读取文件","输入文件名");
-    if(name.isEmpty())return;
-    QString txt = g_fs.readFile(name);
-    if(!g_fs.lastError.isEmpty())
+    QString filename=
+        QInputDialog::getText(
+            this,
+            "搜索",
+            "输入文件名"
+            );
+
+    if(filename.isEmpty())
+        return;
+
+    QString path=
+        filesystem.searchFile(
+            filename
+            );
+
+    if(path.isEmpty())
     {
-        QMessageBox::warning(this,"读取失败",g_fs.lastError);
+        showError();
         return;
     }
-    ui->textEdit->setPlainText(txt);
+
+    QMessageBox::information(
+        this,
+        "搜索结果",
+        path
+        );
 }
