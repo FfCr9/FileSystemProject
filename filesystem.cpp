@@ -590,11 +590,8 @@ void FileSystem::loadFilesFromFile()
         QStringList parts = fullPath.split("/");
 
         QString fname = parts.last();
-
         QString cont = decryptText(lst[1]);
-
         QString own = lst[2];
-
         QString perm = lst[3];
 
         int sz = lst[4].toInt();
