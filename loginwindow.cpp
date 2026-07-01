@@ -6,6 +6,8 @@
 #include <QMessageBox>
 #include <QPushButton>
 
+extern FileSystem g_fs;
+
 LoginWindow::LoginWindow(QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::LoginWindow)
@@ -52,6 +54,13 @@ void LoginWindow::login()
         return;
     }
 
+    bool ret = g_fs.login(username, password);
+       if(!ret)
+       {
+           QMessageBox::warning(this,"登录失败",g_fs.lastError);
+           return;
+       }
+
     MainWindow *w =
         new MainWindow;
 
@@ -79,6 +88,13 @@ void LoginWindow::registerUser()
 
         return;
     }
+
+    bool ret = g_fs.registerUser(username,password);
+      if(!ret)
+      {
+          QMessageBox::warning(this,"注册失败",g_fs.lastError);
+          return;
+      }
 
     QMessageBox::information(
         this,
