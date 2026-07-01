@@ -1,63 +1,83 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-#include <QInputDialog>
 #include <QMessageBox>
 #include <QTreeWidgetItem>
 
-MainWindow::MainWindow(QWidget *parent)
+MainWindow::MainWindow(
+    FileSystem *fs,
+    QWidget *parent)
     :QMainWindow(parent)
     ,ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
 
+    filesystem = fs;
+
+    // 隐藏树标题
+    ui->fileTree->setHeaderHidden(true);
+
     connect(
         ui->createBtn,
         &QPushButton::clicked,
         this,
-        &MainWindow::createFile
-        );
+        &MainWindow::createFile);
 
     connect(
         ui->deleteBtn,
         &QPushButton::clicked,
         this,
-        &MainWindow::deleteFile
-        );
+        &MainWindow::deleteFile);
 
     connect(
-        ui->mkdirBtn,
+        ui->openBtn,
         &QPushButton::clicked,
         this,
-        &MainWindow::createDir
-        );
+        &MainWindow::openFile);
 
     connect(
         ui->saveBtn,
         &QPushButton::clicked,
         this,
-        &MainWindow::saveFile
-        );
+        &MainWindow::saveFile);
+
+    connect(
+        ui->mkdirBtn,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::createDir);
+
+    connect(
+        ui->rmdirBtn,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::removeDir);
+
+    connect(
+        ui->refreshBtn,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::refreshList);
 
     connect(
         ui->searchBtn,
         &QPushButton::clicked,
         this,
-        &MainWindow::searchFile
-        );
+        &MainWindow::searchFile);
 
-    ui->treeWidget->clear();
+    // 点击左边文件树自动填入文件名
+    connect(
+        ui->fileTree,
+        &QTreeWidget::itemClicked,
+        this,
+        [=](QTreeWidgetItem *item,int)
+        {
+            ui->fileNameEdit
+                ->setText(
+                    item->text(0));
+        });
 
-    QTreeWidgetItem *root =
-        new QTreeWidgetItem;
-
-    root->setText(
-        0,
-        "root"
-        );
-
-    ui->treeWidget
-        ->addTopLevelItem(root);
+    refreshList();
 }
 
 MainWindow::~MainWindow()
@@ -65,197 +85,184 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::showError()
-{
-    QString msg=
-        filesystem.lastError;
-
-    if(msg.isEmpty())
-    {
-        msg="未知错误";
-    }
-
-    QMessageBox::warning(
-        this,
-        "操作失败",
-        msg
-        );
-}
-
 void MainWindow::createFile()
 {
-    QString filename=
-        QInputDialog::getText(
-            this,
-            "创建文件",
-            "输入文件名："
-            );
+    QString name =
+        ui->fileNameEdit
+            ->text();
 
-    if(filename.isEmpty())
-        return;
-
-    bool ok=
-        filesystem.createFile(
-            filename
-            );
-
-    if(!ok)
+    if(!filesystem->createFile(name))
     {
-        showError();
+        QMessageBox::warning(
+            this,
+            "错误",
+            filesystem->lastError);
+
         return;
     }
 
-    QTreeWidgetItem *item=
-        new QTreeWidgetItem;
-
-    item->setText(
-        0,
-        filename
-        );
-
-    ui->treeWidget
-        ->topLevelItem(0)
-        ->addChild(item);
+    refreshList();
 }
 
 void MainWindow::deleteFile()
 {
-    auto item=
-        ui->treeWidget
-            ->currentItem();
+    QString name =
+        ui->fileNameEdit
+            ->text();
 
-    if(item==nullptr)
+    if(!filesystem->deleteFile(name))
     {
         QMessageBox::warning(
             this,
             "错误",
-            "请选择文件"
-            );
+            filesystem->lastError);
 
         return;
     }
 
-    QString filename=
-        item->text(0);
-
-    bool ok=
-        filesystem.deleteFile(
-            filename
-            );
-
-    if(!ok)
-    {
-        showError();
-        return;
-    }
-
-    delete item;
+    refreshList();
 }
 
-void MainWindow::createDir()
+void MainWindow::openFile()
 {
-    QString dirname=
-        QInputDialog::getText(
-            this,
-            "创建目录",
-            "输入目录名："
-            );
+    QString name =
+        ui->fileNameEdit
+            ->text();
 
-    if(dirname.isEmpty())
-        return;
+    QString content =
+        filesystem
+            ->readFile(name);
 
-    bool ok=
-        filesystem.createDirectory(
-            dirname
-            );
-
-    if(!ok)
+    if(!filesystem
+             ->lastError
+             .isEmpty())
     {
-        showError();
+        QMessageBox::warning(
+            this,
+            "错误",
+            filesystem->lastError);
+
         return;
     }
 
-    QTreeWidgetItem *item=
-        new QTreeWidgetItem;
-
-    item->setText(
-        0,
-        "[DIR] "+dirname
-        );
-
-    ui->treeWidget
-        ->topLevelItem(0)
-        ->addChild(item);
+    ui->contentEdit
+        ->setPlainText(
+            content);
 }
 
 void MainWindow::saveFile()
 {
-    QString text=
-        ui->textEdit->toPlainText();
+    QString name =
+        ui->fileNameEdit
+            ->text();
 
-    auto item=
-        ui->treeWidget
-            ->currentItem();
+    QString content =
+        ui->contentEdit
+            ->toPlainText();
 
-    if(item==nullptr)
+    if(!filesystem->writeFile(
+            name,
+            content))
     {
         QMessageBox::warning(
             this,
             "错误",
-            "未选择文件"
-            );
+            filesystem->lastError);
 
-        return;
-    }
-
-    QString filename=
-        item->text(0);
-
-    bool ok=
-        filesystem.writeFile(
-            filename,
-            text
-            );
-
-    if(!ok)
-    {
-        showError();
         return;
     }
 
     QMessageBox::information(
         this,
-        "成功",
-        "保存成功"
-        );
+        "提示",
+        "保存成功");
+}
+
+void MainWindow::createDir()
+{
+    QString name =
+        ui->fileNameEdit
+            ->text();
+
+    if(!filesystem
+             ->createDirectory(name))
+    {
+        QMessageBox::warning(
+            this,
+            "错误",
+            filesystem->lastError);
+
+        return;
+    }
+
+    refreshList();
+}
+
+void MainWindow::removeDir()
+{
+    QString name =
+        ui->fileNameEdit
+            ->text();
+
+    if(!filesystem
+             ->rmdir(name))
+    {
+        QMessageBox::warning(
+            this,
+            "错误",
+            filesystem->lastError);
+
+        return;
+    }
+
+    refreshList();
 }
 
 void MainWindow::searchFile()
 {
-    QString filename=
-        QInputDialog::getText(
-            this,
-            "搜索",
-            "输入文件名"
-            );
+    QString name =
+        ui->fileNameEdit
+            ->text();
 
-    if(filename.isEmpty())
-        return;
-
-    QString path=
-        filesystem.searchFile(
-            filename
-            );
+    QString path =
+        filesystem
+            ->searchFile(name);
 
     if(path.isEmpty())
     {
-        showError();
+        QMessageBox::warning(
+            this,
+            "错误",
+            filesystem->lastError);
+
         return;
     }
 
     QMessageBox::information(
         this,
         "搜索结果",
-        path
-        );
+        path);
+}
+
+void MainWindow::refreshList()
+{
+    ui->fileTree->clear();
+
+    QStringList list =
+        filesystem
+            ->listDirectory();
+
+    for(QString s : list)
+    {
+        QTreeWidgetItem *item =
+            new QTreeWidgetItem;
+
+        item->setText(
+            0,
+            s);
+
+        ui->fileTree
+            ->addTopLevelItem(
+                item);
+    }
 }

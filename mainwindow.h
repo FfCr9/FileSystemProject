@@ -15,7 +15,10 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
+    explicit MainWindow(
+        FileSystem *fs,
+        QWidget *parent=nullptr);
+
     ~MainWindow();
 
 private slots:
@@ -24,19 +27,23 @@ private slots:
 
     void deleteFile();
 
-    void createDir();
+    void openFile();
 
     void saveFile();
+
+    void createDir();
+
+    void removeDir();
+
+    void refreshList();
 
     void searchFile();
 
 private:
 
-    void showError();
-
     Ui::MainWindow *ui;
 
-    FileSystem filesystem;
+    FileSystem *filesystem;
 };
 
 #endif

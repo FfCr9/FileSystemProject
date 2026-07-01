@@ -1,7 +1,8 @@
 #ifndef LOGINWINDOW_H
 #define LOGINWINDOW_H
-#include "filesystem.h"
+
 #include <QDialog>
+#include "filesystem.h"
 
 namespace Ui {
 class LoginWindow;
@@ -16,14 +17,13 @@ public:
     ~LoginWindow();
 
 private slots:
-
     void login();
-
     void registerUser();
 
 private:
-
     Ui::LoginWindow *ui;
+
+    FileSystem filesystem;
 };
 
-#endif
+#endif // LOGINWINDOW_H

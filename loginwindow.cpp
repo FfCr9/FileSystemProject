@@ -1,12 +1,9 @@
 #include "loginwindow.h"
 #include "ui_loginwindow.h"
 
-#include "mainwindow.h"
-
 #include <QMessageBox>
+#include "mainwindow.h"
 #include <QPushButton>
-
-extern FileSystem g_fs;
 
 LoginWindow::LoginWindow(QWidget *parent)
     : QDialog(parent)
@@ -50,23 +47,29 @@ void LoginWindow::login()
             "错误",
             "用户名和密码不能为空"
             );
-
         return;
     }
 
-    bool ret = g_fs.login(username, password);
-       if(!ret)
-       {
-           QMessageBox::warning(this,"登录失败",g_fs.lastError);
-           return;
-       }
+    if(filesystem.login(
+            username,
+            password))
+    {
+        MainWindow *w =
+            new MainWindow(
+                &filesystem);
 
-    MainWindow *w =
-        new MainWindow;
+        w->show();
 
-    w->show();
-
-    close();
+        this->hide();
+    }
+    else
+    {
+        QMessageBox::warning(
+            this,
+            "登录失败",
+            filesystem.lastError
+            );
+    }
 }
 
 void LoginWindow::registerUser()
@@ -85,20 +88,25 @@ void LoginWindow::registerUser()
             "错误",
             "用户名和密码不能为空"
             );
-
         return;
     }
 
-    bool ret = g_fs.registerUser(username,password);
-      if(!ret)
-      {
-          QMessageBox::warning(this,"注册失败",g_fs.lastError);
-          return;
-      }
-
-    QMessageBox::information(
-        this,
-        "成功",
-        "注册成功(模拟)"
-        );
+    if(filesystem.registerUser(
+            username,
+            password))
+    {
+        QMessageBox::information(
+            this,
+            "提示",
+            "注册成功"
+            );
+    }
+    else
+    {
+        QMessageBox::warning(
+            this,
+            "注册失败",
+            filesystem.lastError
+            );
+    }
 }
