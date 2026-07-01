@@ -55,6 +55,8 @@ public:
 private:
     QString recursiveSearch(Directory* dir, QString target, QString path);
 
+    bool removeFileFromDir(Directory* dir, QString filename);
+
     QList<User> users;
     QMap<QString, int> fileMap;
     QMap<int, Inode*> inodeTable;
@@ -63,6 +65,18 @@ private:
 
     Directory* root;
     Directory* currentDir;
+
+    void saveDirectories(
+            Directory* dir,
+            QTextStream &out,
+            QString path);
+
+    void saveFilesInDirectory(Directory *dir,
+                              QTextStream &out,
+                              QString path);
+
+    void loadDirectoryByPath(
+            QString path);
 
     //优化：文件加密存储
     QString encryptText(const QString &text);

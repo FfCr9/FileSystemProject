@@ -5,6 +5,7 @@ FileSystem::FileSystem()
     root = new Directory("root");
     currentDir = root;
     lastError.clear();
+    fdCount = 0;
 
     loadUsersFromFile();
     loadFilesFromFile();
@@ -12,6 +13,9 @@ FileSystem::FileSystem()
 
 FileSystem::~FileSystem()
 {
+    saveUsersToFile();
+    saveFilesToFile();
+
     for(auto &p : inodeTable)
     {
         delete p;
@@ -26,13 +30,37 @@ void FileSystem::setCurrentUser(QString name)
 
 bool FileSystem::hasPermission(Inode *node, QString mode)
 {
-    if(node->owner != currentUser)
-        return false;
+    if(node->owner == currentUser)
+        return true;
     return node->permission.contains(mode);
+}
+
+bool FileSystem::removeFileFromDir(Directory* dir, QString filename)
+{
+    if(dir->files.contains(filename))
+    {
+        dir->files.removeOne(filename);
+        return true;
+    }
+    for(Directory* sub : dir->childDirs)
+    {
+        if(removeFileFromDir(sub, filename))
+            return true;
+    }
+    return false;
 }
 
 bool FileSystem::registerUser(QString username, QString password)
 {
+    username = username.trimmed();
+    password = password.trimmed();
+
+    if(username.isEmpty() || password.isEmpty())
+    {
+        lastError = "用户名密码不能为空";
+        return false;
+    }
+
     for(auto &u : users)
     {
         if(u.username == username)
@@ -64,21 +92,30 @@ bool FileSystem::login(QString username, QString password)
 
 bool FileSystem::createFile(QString filename)
 {
+    for(Directory* d : currentDir->childDirs)
+    {
+        if(d->dirname == filename)
+        {
+            lastError = "同名目录已存在";
+            return false;
+        }
+    }
+
     if(currentDir->files.contains(filename))
     {
-        lastError = "当前目录文件已存在";
+        lastError = "目录文件名已存在";
         return false;
     }
     if(fileMap.contains(filename))
     {
-        lastError = "文件已存在";
+        lastError = "文件名已存在";
         return false;
     }
 
     int bid = diskManager.allocateBlock();
     if(bid == -1)
     {
-        lastError = "磁盘空间已满";
+        lastError = "磁盘空间不足";
         return false;
     }
 
@@ -88,6 +125,7 @@ bool FileSystem::createFile(QString filename)
     node->permission = "rw";
     node->size = 0;
     node->content = "";
+    node->createTime = QDateTime::currentDateTime();
 
     inodeTable[bid] = node;
     fileMap[filename] = bid;
@@ -102,7 +140,7 @@ bool FileSystem::deleteFile(QString filename)
 {
     if(!fileMap.contains(filename))
     {
-        lastError = "文件不存在";
+        lastError = "文件名不存在";
         return false;
     }
     int bid = fileMap[filename];
@@ -110,7 +148,7 @@ bool FileSystem::deleteFile(QString filename)
 
     if(!hasPermission(node,"w"))
     {
-        lastError = "无权限删除";
+        lastError = "权限不足";
         return false;
     }
 
@@ -118,7 +156,7 @@ bool FileSystem::deleteFile(QString filename)
     delete inodeTable[bid];
     inodeTable.remove(bid);
     fileMap.remove(filename);
-    currentDir->files.removeOne(filename);
+    removeFileFromDir(root, filename);
 
     saveFilesToFile();
     lastError.clear();
@@ -129,7 +167,7 @@ bool FileSystem::writeFile(QString filename, QString content)
 {
     if(!fileMap.contains(filename))
     {
-        lastError = "文件不存在";
+        lastError = "文件名不存在";
         return false;
     }
     int bid = fileMap[filename];
@@ -137,7 +175,7 @@ bool FileSystem::writeFile(QString filename, QString content)
 
     if(!hasPermission(node,"w"))
     {
-        lastError = "无写入权限";
+        lastError = "权限不足";
         return false;
     }
 
@@ -152,14 +190,14 @@ bool FileSystem::appendFile(QString filename, QString content)
 {
     if(!fileMap.contains(filename))
     {
-        lastError = "文件不存在";
+        lastError = "文件名不存在";
         return false;
     }
     int bid = fileMap[filename];
     Inode* node = inodeTable[bid];
     if(!hasPermission(node,"w"))
     {
-        lastError = "无写入权限";
+        lastError = "权限不足";
         return false;
     }
     node->content += content;
@@ -173,7 +211,7 @@ QString FileSystem::readFile(QString filename)
 {
     if(!fileMap.contains(filename))
     {
-        lastError = "文件不存在";
+        lastError = "文件名不存在";
         return "";
     }
     int bid = fileMap[filename];
@@ -181,7 +219,7 @@ QString FileSystem::readFile(QString filename)
 
     if(!hasPermission(node,"r"))
     {
-        lastError = "无读取权限";
+        lastError = "权限不足";
         return "";
     }
     lastError.clear();
@@ -192,14 +230,14 @@ bool FileSystem::chmod(QString filename, QString mode)
 {
     if(!fileMap.contains(filename))
     {
-        lastError = "文件不存在";
+        lastError = "文件名不存在";
         return false;
     }
     int bid = fileMap[filename];
     Inode* node = inodeTable[bid];
     if(node->owner != currentUser)
     {
-        lastError = "仅文件所有者可修改权限";
+        lastError = "权限不足，仅所有者可修改权限";
         return false;
     }
     node->permission = mode;
@@ -210,6 +248,12 @@ bool FileSystem::chmod(QString filename, QString mode)
 
 bool FileSystem::createDirectory(QString dirname)
 {
+    if(currentDir->files.contains(dirname))
+    {
+        lastError = "同名文件已存在";
+        return false;
+    }
+
     for(Directory* d : currentDir->childDirs)
     {
         if(d->dirname == dirname)
@@ -221,6 +265,8 @@ bool FileSystem::createDirectory(QString dirname)
     Directory* newDir = new Directory(dirname);
     newDir->parent = currentDir;
     currentDir->childDirs.append(newDir);
+
+    saveFilesToFile();
     lastError.clear();
     return true;
 }
@@ -239,6 +285,7 @@ bool FileSystem::rmdir(QString dirname)
             }
             delete d;
             currentDir->childDirs.removeAt(i);
+            saveFilesToFile();
             lastError.clear();
             return true;
         }
@@ -276,6 +323,10 @@ bool FileSystem::cd(QString dirname)
 QStringList FileSystem::listDirectory()
 {
     QStringList res;
+    for(Directory *d : currentDir->childDirs)
+    {
+        res.append("[DIR] " + d->dirname);
+    }
     for(QString f : currentDir->files)
     {
         res.append(f);
@@ -305,9 +356,28 @@ int FileSystem::openFile(QString filename)
 {
     if(!fileMap.contains(filename))
     {
-        lastError = "文件不存在";
+        lastError = "文件名不存在";
         return -1;
     }
+    int bid = fileMap[filename];
+    Inode *node = inodeTable[bid];
+    if(!hasPermission(node,"r"))
+    {
+        lastError = "权限不足";
+        return -1;
+    }
+
+    for(auto it = openFileTable.begin();
+        it != openFileTable.end();
+        ++it)
+    {
+        if(it.value() == filename)
+        {
+            lastError = "文件已打开";
+            return it.key();
+        }
+    }
+
     int fd = fdCount++;
     openFileTable[fd] = filename;
     lastError.clear();
@@ -345,7 +415,7 @@ QString FileSystem::searchFile(QString filename)
     QString fullPath = recursiveSearch(root, filename, "root");
     if(fullPath.isEmpty())
     {
-        lastError = "未找到该文件";
+        lastError = "文件不存在";
         return "";
     }
     lastError.clear();
@@ -379,18 +449,47 @@ void FileSystem::loadUsersFromFile()
     f.close();
 }
 
-void FileSystem::saveFilesToFile()
+void FileSystem::saveDirectories(
+        Directory *dir,
+        QTextStream &out,
+        QString path)
 {
-    QFile f("data/files.txt");
-    if(!f.open(QIODevice::WriteOnly|QIODevice::Text)) return;
-    QTextStream out(&f);
-    for(auto it=fileMap.begin();it!=fileMap.end();it++)
+    for(Directory *sub : dir->childDirs)
     {
-        QString name = it.key();
-        int id = it.value();
-        Inode* node = inodeTable[id];
-        QString timeStr = node->createTime.toString("yyyy-MM-dd HH:mm:ss");
-        out << name << "|"
+        if(sub == nullptr)
+            continue;
+        QString full = path + "/" + sub->dirname;
+
+        out << "DIR|"
+            << full
+            << "\n";
+
+        saveDirectories(
+                sub,
+                out,
+                full);
+    }
+}
+
+void FileSystem::saveFilesInDirectory(
+        Directory *dir,
+        QTextStream &out,
+        QString path)
+{
+    for(QString fileName : dir->files)
+    {
+        if(!fileMap.contains(fileName))
+            continue;
+
+        int id = fileMap[fileName];
+        Inode *node = inodeTable[id];
+
+        QString timeStr =
+                node->createTime.toString(
+                    "yyyy-MM-dd HH:mm:ss");
+
+        out << path << "/"
+            << fileName << "|"
             << encryptText(node->content) << "|"
             << node->owner << "|"
             << node->permission << "|"
@@ -398,6 +497,70 @@ void FileSystem::saveFilesToFile()
             << timeStr
             << "\n";
     }
+
+    for(Directory *sub : dir->childDirs)
+    {
+        if(sub == nullptr)
+            continue;
+
+        saveFilesInDirectory(
+                sub,
+                out,
+                path + "/" + sub->dirname);
+    }
+}
+
+void FileSystem::loadDirectoryByPath(QString path)
+{
+    QStringList dirs = path.split("/");
+
+    Directory *current = root;
+
+    for(int i = 1; i < dirs.size(); i++)
+    {
+        QString dirname = dirs[i];
+
+        Directory *next = nullptr;
+
+        for(Directory *sub : current->childDirs)
+        {
+            if(sub->dirname == dirname)
+            {
+                next = sub;
+                break;
+            }
+        }
+
+        if(next == nullptr)
+        {
+            next = new Directory(dirname);
+            next->parent = current;
+            current->childDirs.append(next);
+        }
+
+        current = next;
+    }
+}
+
+void FileSystem::saveFilesToFile()
+{
+    QFile f("data/files.txt");
+
+    if(!f.open(QIODevice::WriteOnly | QIODevice::Text))
+        return;
+
+    QTextStream out(&f);
+
+    saveDirectories(
+                root,
+                out,
+                "root");
+
+    saveFilesInDirectory(
+                root,
+                out,
+                "root");
+
     f.close();
 }
 
@@ -410,33 +573,82 @@ void FileSystem::loadFilesFromFile()
     {
         QString line = in.readLine();
         QStringList lst = line.split("|");
-        if(lst.size() < 6) continue;
-        QString fname = lst[0];
-        QString cont = decryptText(lst[1]);
-        QString own = lst[2];
-        QString perm = lst[3];
-        int sz = lst[4].toInt();
-        QDateTime ctime = QDateTime::fromString(lst[5], "yyyy-MM-dd HH:mm:ss");
+        if(lst.isEmpty())
+            continue;
+        if(lst[0] == "DIR")
+        {
+            if(lst.size() >= 2)
+                loadDirectoryByPath(lst[1]);
 
-        createFile(fname);
-        int bid = fileMap[fname];
-        Inode* node = inodeTable[bid];
-        node->content = cont;
+            continue;
+        }
+
+
+        if(lst.size() < 6) continue;
+        QString fullPath = lst[0];
+
+        QStringList parts = fullPath.split("/");
+
+        QString fname = parts.last();
+
+        QString cont = decryptText(lst[1]);
+
+        QString own = lst[2];
+
+        QString perm = lst[3];
+
+        int sz = lst[4].toInt();
+
+        QDateTime ctime =
+                QDateTime::fromString(
+                    lst[5],
+                    "yyyy-MM-dd HH:mm:ss");
+
+        int bid = diskManager.allocateBlock();
+
+        if(bid == -1)
+            continue;
+
+        Inode *node = new Inode;
+
+        node->inodeID = bid;
         node->owner = own;
         node->permission = perm;
         node->size = sz;
+        node->content = cont;
         node->createTime = ctime;
+
+        inodeTable[bid] = node;
+
+        fileMap[fname] = bid;
+
+        Directory *target = root;
+
+        for(int i = 1; i < parts.size() - 1; i++)
+        {
+            QString dirName = parts[i];
+
+            for(Directory *d : target->childDirs)
+            {
+                if(d->dirname == dirName)
+                {
+                    target = d;
+                    break;
+                }
+            }
+        }
+
+        target->files.append(fname);
     }
     f.close();
 }
 
-//外部本地txt导入为系统内文件
 bool FileSystem::importTxt(QString sysFileName, QString localTxtPath)
 {
     QFile localFile(localTxtPath);
     if (!localFile.open(QIODevice::ReadOnly | QIODevice::Text))
     {
-        lastError = "本地文件打开失败，路径不存在或无访问权限";
+        lastError = "本地文件打开失败，路径不存在或权限不足";
         return false;
     }
     QTextStream stream(&localFile);
@@ -453,12 +665,11 @@ bool FileSystem::importTxt(QString sysFileName, QString localTxtPath)
     return res;
 }
 
-//将系统内文件导出到本地txt
 bool FileSystem::exportTxt(QString sysFileName, QString localTxtPath)
 {
     if (!fileMap.contains(sysFileName))
     {
-        lastError = "系统内该文件不存在";
+        lastError = "文件名不存在";
         return false;
     }
     QString content = readFile(sysFileName);
@@ -468,7 +679,7 @@ bool FileSystem::exportTxt(QString sysFileName, QString localTxtPath)
     QFile outFile(localTxtPath);
     if (!outFile.open(QIODevice::WriteOnly | QIODevice::Text))
     {
-        lastError = "导出路径无写入权限";
+        lastError = "权限不足";
         return false;
     }
     QTextStream stream(&outFile);
