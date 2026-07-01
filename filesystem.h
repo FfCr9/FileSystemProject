@@ -42,6 +42,9 @@ public:
 
     bool hasPermission(Inode* node, QString mode);
 
+    bool importTxt(QString sysFileName, QString localTxtPath);
+    bool exportTxt(QString sysFileName, QString localTxtPath);
+
     void saveUsersToFile();
     void loadUsersFromFile();
     void saveFilesToFile();
@@ -60,6 +63,11 @@ private:
 
     Directory* root;
     Directory* currentDir;
+
+    //优化：文件加密存储
+    QString encryptText(const QString &text);
+    QString decryptText(const QString &text);
+    const QString encryptKey = "OSFileSys2026";
 
     QMap<int, QString> openFileTable;
     int fdCount;

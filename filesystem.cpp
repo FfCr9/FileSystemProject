@@ -391,7 +391,7 @@ void FileSystem::saveFilesToFile()
         Inode* node = inodeTable[id];
         QString timeStr = node->createTime.toString("yyyy-MM-dd HH:mm:ss");
         out << name << "|"
-            << node->content << "|"
+            << encryptText(node->content) << "|"
             << node->owner << "|"
             << node->permission << "|"
             << node->size << "|"
@@ -412,7 +412,7 @@ void FileSystem::loadFilesFromFile()
         QStringList lst = line.split("|");
         if(lst.size() < 6) continue;
         QString fname = lst[0];
-        QString cont = lst[1];
+        QString cont = decryptText(lst[1]);
         QString own = lst[2];
         QString perm = lst[3];
         int sz = lst[4].toInt();
@@ -428,4 +428,69 @@ void FileSystem::loadFilesFromFile()
         node->createTime = ctime;
     }
     f.close();
+}
+
+//外部本地txt导入为系统内文件
+bool FileSystem::importTxt(QString sysFileName, QString localTxtPath)
+{
+    QFile localFile(localTxtPath);
+    if (!localFile.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        lastError = "本地文件打开失败，路径不存在或无访问权限";
+        return false;
+    }
+    QTextStream stream(&localFile);
+    QString content = stream.readAll();
+    localFile.close();
+
+    if (!fileMap.contains(sysFileName))
+    {
+        if (!createFile(sysFileName))
+            return false;
+    }
+    bool res = writeFile(sysFileName, content);
+    if (res) lastError.clear();
+    return res;
+}
+
+//将系统内文件导出到本地txt
+bool FileSystem::exportTxt(QString sysFileName, QString localTxtPath)
+{
+    if (!fileMap.contains(sysFileName))
+    {
+        lastError = "系统内该文件不存在";
+        return false;
+    }
+    QString content = readFile(sysFileName);
+    if (!lastError.isEmpty())
+        return false;
+
+    QFile outFile(localTxtPath);
+    if (!outFile.open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        lastError = "导出路径无写入权限";
+        return false;
+    }
+    QTextStream stream(&outFile);
+    stream << content;
+    outFile.close();
+    lastError.clear();
+    return true;
+}
+
+QString FileSystem::encryptText(const QString &text)
+{
+    QString result;
+    for (int i = 0; i < text.size(); i++)
+    {
+        QChar ch = text[i];
+        QChar keyCh = encryptKey[i % encryptKey.size()];
+        result += QChar(ch.unicode() ^ keyCh.unicode());
+    }
+    return result;
+}
+
+QString FileSystem::decryptText(const QString &text)
+{
+    return encryptText(text);
 }
