@@ -6,4 +6,5 @@ Inode::Inode()
     size = 0;
     owner = "";
     permission = "";
+    createTime = QDateTime::currentDateTime();
 }
