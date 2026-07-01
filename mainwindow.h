@@ -32,7 +32,11 @@ private slots:
 
 private:
 
+    void showError();
+
     Ui::MainWindow *ui;
+
+    FileSystem filesystem;
 };
 
 #endif

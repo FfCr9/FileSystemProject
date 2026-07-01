@@ -21,6 +21,7 @@ SOURCES += \
 HEADERS += \
     directory.h \
     diskmanager.h \
+    errorcode.h \
     filesystem.h \
     inode.h \
     loginwindow.h \
