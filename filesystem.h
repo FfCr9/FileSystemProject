@@ -22,6 +22,7 @@ public:
     bool registerUser(QString username, QString password);
     bool login(QString username, QString password);
     void setCurrentUser(QString name);
+    void logout();
 
     bool createFile(QString filename);
     bool deleteFile(QString filename);
@@ -52,10 +53,17 @@ public:
 
     QString lastError;
 
+    QString readByFd(int fd);
+    bool writeByFd( int fd, QString content);
+
+    QString getCurrentPath();
+
 private:
     QString recursiveSearch(Directory* dir, QString target, QString path);
 
     bool removeFileFromDir(Directory* dir, QString filename);
+    bool isValidPathName(const QString& name);
+    void setLastError(const QString& err);
 
     QList<User> users;
     QMap<QString, int> fileMap;
@@ -85,6 +93,8 @@ private:
 
     QMap<int, QString> openFileTable;
     int fdCount;
+
+    QString m_lastError;
 };
 
 #endif

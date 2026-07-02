@@ -226,6 +226,18 @@ QString FileSystem::readFile(QString filename)
     return inodeTable[bid]->content;
 }
 
+QString FileSystem:: getCurrentPath()
+{
+    QString path;
+    Directory *dir= currentDir;
+    while(dir)
+    {
+        path= "/" + dir->dirname+ path;
+        dir= dir->parent;
+    }
+    return path;
+}
+
 bool FileSystem::chmod(QString filename, QString mode)
 {
     if(!fileMap.contains(filename))
@@ -294,30 +306,41 @@ bool FileSystem::rmdir(QString dirname)
     return false;
 }
 
-bool FileSystem::cd(QString dirname)
+bool FileSystem::cd( QString path)
 {
-    if(dirname == "..")
+    Directory *target;
+    if(path.startsWith("root"))
+        target=root;
+    else
+        target=currentDir;
+    QStringList dirs= path.split( "/", Qt::SkipEmptyParts);
+    for(QString dir:dirs)
     {
-        if(currentDir->parent != nullptr)
+        if(dir=="..")
         {
-            currentDir = currentDir->parent;
-            lastError.clear();
-            return true;
+            if(target->parent)
+                target= target->parent;
+            continue;
         }
-        lastError = "已是根目录，无法退回";
-        return false;
-    }
-    for(Directory* d : currentDir->childDirs)
-    {
-        if(d->dirname == dirname)
+        bool found=false;
+        for(Directory *d: target->childDirs)
         {
-            currentDir = d;
-            lastError.clear();
-            return true;
+            if(d->dirname==dir)
+            {
+                target=d;
+                found=true;
+                break;
+            }
+        }
+        if(!found)
+        {
+            lastError= "路径不存在";
+            return false;
         }
     }
-    lastError = "目录不存在";
-    return false;
+    currentDir=target;
+    lastError.clear();
+    return true;
 }
 
 QStringList FileSystem::listDirectory()
@@ -639,6 +662,30 @@ void FileSystem::loadFilesFromFile()
     }
     f.close();
 }
+
+
+QString FileSystem::readByFd( int fd)
+{
+    if(!openFileTable.contains(fd))
+    {
+        lastError="无效文件描述符";
+        return "";
+    }
+    QString filename= openFileTable[fd];
+    return readFile( filename);
+}
+
+bool FileSystem::writeByFd( int fd, QString content)
+{
+    if(!openFileTable.contains(fd))
+    {
+        lastError="无效文件描述符";
+        return false;
+    }
+    QString filename= openFileTable[fd];
+    return writeFile( filename, content);
+}
+
 
 bool FileSystem::importTxt(QString sysFileName, QString localTxtPath)
 {
