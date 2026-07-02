@@ -3,6 +3,7 @@
 
 #include <QMessageBox>
 #include <QTreeWidgetItem>
+#include <QFileDialog>
 
 MainWindow::MainWindow(
     FileSystem *fs,
@@ -12,9 +13,8 @@ MainWindow::MainWindow(
 {
     ui->setupUi(this);
 
-    filesystem = fs;
+    filesystem=fs;
 
-    // 隐藏树标题
     ui->fileTree->setHeaderHidden(true);
 
     connect(
@@ -65,17 +65,56 @@ MainWindow::MainWindow(
         this,
         &MainWindow::searchFile);
 
-    // 点击左边文件树自动填入文件名
+    connect(
+        ui->importBtn,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::importTxtFile);
+
+    connect(
+        ui->exportBtn,
+        &QPushButton::clicked,
+        this,
+        &MainWindow::exportTxtFile);
+
+    connect(
+        ui->backBtn,
+        &QPushButton::clicked,
+        this,
+        [=]()
+        {
+            if(!filesystem->cd(".."))
+            {
+                QMessageBox::warning(
+                    this,
+                    "错误",
+                    filesystem->lastError);
+
+                return;
+            }
+
+            refreshList();
+        });
+
     connect(
         ui->fileTree,
         &QTreeWidget::itemClicked,
         this,
         [=](QTreeWidgetItem *item,int)
         {
+            QString text=
+                item->text(0);
+
+            text.remove("[DIR] ");
+
             ui->fileNameEdit
-                ->setText(
-                    item->text(0));
+                ->setText(text);
         });
+    connect(
+        ui->fileTree,
+        &QTreeWidget::itemDoubleClicked,
+        this,
+        &MainWindow::enterDirectory);
 
     refreshList();
 }
@@ -87,7 +126,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::createFile()
 {
-    QString name =
+    QString name=
         ui->fileNameEdit
             ->text();
 
@@ -106,7 +145,7 @@ void MainWindow::createFile()
 
 void MainWindow::deleteFile()
 {
-    QString name =
+    QString name=
         ui->fileNameEdit
             ->text();
 
@@ -125,11 +164,11 @@ void MainWindow::deleteFile()
 
 void MainWindow::openFile()
 {
-    QString name =
+    QString name=
         ui->fileNameEdit
             ->text();
 
-    QString content =
+    QString content=
         filesystem
             ->readFile(name);
 
@@ -152,11 +191,11 @@ void MainWindow::openFile()
 
 void MainWindow::saveFile()
 {
-    QString name =
+    QString name=
         ui->fileNameEdit
             ->text();
 
-    QString content =
+    QString content=
         ui->contentEdit
             ->toPlainText();
 
@@ -180,7 +219,7 @@ void MainWindow::saveFile()
 
 void MainWindow::createDir()
 {
-    QString name =
+    QString name=
         ui->fileNameEdit
             ->text();
 
@@ -200,7 +239,7 @@ void MainWindow::createDir()
 
 void MainWindow::removeDir()
 {
-    QString name =
+    QString name=
         ui->fileNameEdit
             ->text();
 
@@ -220,11 +259,11 @@ void MainWindow::removeDir()
 
 void MainWindow::searchFile()
 {
-    QString name =
+    QString name=
         ui->fileNameEdit
             ->text();
 
-    QString path =
+    QString path=
         filesystem
             ->searchFile(name);
 
@@ -248,13 +287,13 @@ void MainWindow::refreshList()
 {
     ui->fileTree->clear();
 
-    QStringList list =
+    QStringList list=
         filesystem
             ->listDirectory();
 
-    for(QString s : list)
+    for(QString s:list)
     {
-        QTreeWidgetItem *item =
+        QTreeWidgetItem *item=
             new QTreeWidgetItem;
 
         item->setText(
@@ -265,4 +304,100 @@ void MainWindow::refreshList()
             ->addTopLevelItem(
                 item);
     }
+}
+
+void MainWindow::importTxtFile()
+{
+    QString path=
+        QFileDialog::
+        getOpenFileName(
+            this,
+            "选择txt文件",
+            "",
+            "*.txt");
+
+    if(path.isEmpty())
+        return;
+
+    QString filename=
+        ui->fileNameEdit
+            ->text();
+
+    if(!filesystem
+             ->importTxt(
+                 filename,
+                 path))
+    {
+        QMessageBox::warning(
+            this,
+            "错误",
+            filesystem->lastError);
+
+        return;
+    }
+
+    refreshList();
+}
+
+void MainWindow::exportTxtFile()
+{
+    QString path=
+        QFileDialog::
+        getSaveFileName(
+            this,
+            "保存txt文件",
+            "",
+            "*.txt");
+
+    if(path.isEmpty())
+        return;
+
+    QString filename=
+        ui->fileNameEdit
+            ->text();
+
+    if(!filesystem
+             ->exportTxt(
+                 filename,
+                 path))
+    {
+        QMessageBox::warning(
+            this,
+            "错误",
+            filesystem->lastError);
+
+        return;
+    }
+
+    QMessageBox::information(
+        this,
+        "提示",
+        "导出成功");
+}
+
+void MainWindow::enterDirectory(
+    QTreeWidgetItem *item,
+    int)
+{
+    QString text=
+        item->text(0);
+
+    // 不是目录
+    if(!text.startsWith("[DIR]"))
+        return;
+
+    QString dirname=
+        text.mid(6);
+
+    if(!filesystem->cd(dirname))
+    {
+        QMessageBox::warning(
+            this,
+            "错误",
+            filesystem->lastError);
+
+        return;
+    }
+
+    refreshList();
 }

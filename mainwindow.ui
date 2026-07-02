@@ -10,163 +10,185 @@
     <height>600</height>
    </rect>
   </property>
+  <property name="maximumSize">
+   <size>
+    <width>881</width>
+    <height>16777215</height>
+   </size>
+  </property>
   <property name="windowTitle">
    <string>文件系统</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">QPushButton{
-    background:#f5f5f5;
-    border:1px solid #d0d0d0;
+   <string notr="true">QMainWindow{
+    background:#fafafa;
+}
+
+QPushButton{
+    border:1px solid #cccccc;
     border-radius:8px;
     padding:6px;
-    min-height:28px;
+    background:white;
 }
 
 QPushButton:hover{
-    background:#e3f2fd;
-}
-
-QPushButton:pressed{
-    background:#cce5ff;
+    background:#dbeafe;
 }
 
 QLineEdit{
-    border:1px solid #d0d0d0;
-    border-radius:8px;
-    padding:5px;
-}
-
-QTextEdit{
-    border:1px solid #d0d0d0;
+    border:1px solid #cccccc;
     border-radius:6px;
+    padding:6px;
 }
 
 QTreeWidget{
-    border:1px solid #d0d0d0;
+    border:1px solid #cccccc;
+    border-radius:6px;
+}
+
+QTextEdit{
+    border:1px solid #cccccc;
     border-radius:6px;
 }</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QWidget" name="layoutWidget">
-    <property name="geometry">
-     <rect>
-      <x>60</x>
-      <y>60</y>
-      <width>631</width>
-      <height>261</height>
-     </rect>
-    </property>
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,2">
-       <item>
-        <widget class="QTreeWidget" name="fileTree">
-         <property name="lineWidth">
-          <number>1</number>
-         </property>
-         <attribute name="headerVisible">
-          <bool>false</bool>
-         </attribute>
-         <column>
+   <property name="maximumSize">
+    <size>
+     <width>881</width>
+     <height>16777215</height>
+    </size>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayout_3">
+    <item>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <item>
+         <widget class="QLabel" name="label">
           <property name="text">
-           <string notr="true">1</string>
+           <string>文件:</string>
           </property>
-         </column>
-        </widget>
-       </item>
-       <item>
-        <widget class="QTextEdit" name="contentEdit"/>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_2">
-       <item>
-        <widget class="QPushButton" name="createBtn">
-         <property name="text">
-          <string>新建文件</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="deleteBtn">
-         <property name="text">
-          <string>删除</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="openBtn">
-         <property name="text">
-          <string>打开</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="rmdirBtn">
-         <property name="text">
-          <string>删除目录</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="mkdirBtn">
-         <property name="text">
-          <string>新建目录</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="refreshBtn">
-         <property name="text">
-          <string>刷新</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="saveBtn">
-         <property name="text">
-          <string>保存</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-    </layout>
-   </widget>
-   <widget class="QWidget" name="horizontalLayoutWidget">
-    <property name="geometry">
-     <rect>
-      <x>60</x>
-      <y>20</y>
-      <width>361</width>
-      <height>44</height>
-     </rect>
-    </property>
-    <layout class="QHBoxLayout" name="horizontalLayout_3">
-     <item>
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>文件:</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLineEdit" name="fileNameEdit">
-       <property name="placeholderText">
-        <string>输入文件名</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="searchBtn">
-       <property name="text">
-        <string>搜索</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="fileNameEdit">
+          <property name="placeholderText">
+           <string>输入文件名</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="searchBtn">
+          <property name="text">
+           <string>搜索</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,2">
+          <item>
+           <widget class="QTreeWidget" name="fileTree">
+            <property name="lineWidth">
+             <number>1</number>
+            </property>
+            <attribute name="headerVisible">
+             <bool>false</bool>
+            </attribute>
+            <column>
+             <property name="text">
+              <string notr="true">1</string>
+             </property>
+            </column>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTextEdit" name="contentEdit"/>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QPushButton" name="createBtn">
+            <property name="text">
+             <string>新建文件</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="deleteBtn">
+            <property name="text">
+             <string>删除</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="openBtn">
+            <property name="text">
+             <string>打开</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="rmdirBtn">
+            <property name="text">
+             <string>删除目录</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="mkdirBtn">
+            <property name="text">
+             <string>新建目录</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="refreshBtn">
+            <property name="text">
+             <string>刷新</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="saveBtn">
+            <property name="text">
+             <string>保存</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="backBtn">
+            <property name="text">
+             <string>返回上一级</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="importBtn">
+            <property name="text">
+             <string>导入TXT</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="exportBtn">
+            <property name="text">
+             <string>导出TXT</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </item>
+   </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">

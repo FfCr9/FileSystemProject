@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 #include "filesystem.h"
+#include <QTreeWidgetItem>
+#include <QFileDialog>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -38,6 +40,14 @@ private slots:
     void refreshList();
 
     void searchFile();
+
+    void importTxtFile();
+
+    void exportTxtFile();
+
+    void enterDirectory(
+        QTreeWidgetItem *item,
+        int column);
 
 private:
 

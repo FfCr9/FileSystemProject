@@ -1,4 +1,6 @@
 #include "filesystem.h"
+#include <QDir>
+#include <QCoreApplication>
 
 FileSystem::FileSystem()
 {
@@ -6,6 +8,17 @@ FileSystem::FileSystem()
     currentDir = root;
     lastError.clear();
     fdCount = 0;
+
+    QString dataPath =
+        QCoreApplication::applicationDirPath()
+        + "/data";
+
+    QDir dir;
+
+    if(!dir.exists(dataPath))
+    {
+        dir.mkpath(dataPath);
+    }
 
     loadUsersFromFile();
     loadFilesFromFile();
@@ -50,43 +63,64 @@ bool FileSystem::removeFileFromDir(Directory* dir, QString filename)
     return false;
 }
 
-bool FileSystem::registerUser(QString username, QString password)
+bool FileSystem::registerUser(
+    QString username,
+    QString password)
 {
-    username = username.trimmed();
-    password = password.trimmed();
+    username=username.trimmed();
+    password=password.trimmed();
 
-    if(username.isEmpty() || password.isEmpty())
+    if(username.isEmpty()
+        || password.isEmpty())
     {
-        lastError = "用户名密码不能为空";
+        lastError="用户名密码不能为空";
         return false;
     }
 
-    for(auto &u : users)
+    for(auto &u:users)
     {
-        if(u.username == username)
+        if(u.username==username)
         {
-            lastError = "账号已存在";
+            lastError="账号已存在";
             return false;
         }
     }
-    users.append(User(username, password));
+
+    users.append(
+        User(
+            username,
+            password));
+
     saveUsersToFile();
+
     lastError.clear();
+
     return true;
 }
 
-bool FileSystem::login(QString username, QString password)
+bool FileSystem::login(
+    QString username,
+    QString password)
 {
-    for(auto &u : users)
+    username=username.trimmed();
+    password=password.trimmed();
+
+    for(auto &u:users)
     {
-        if(u.username == username && u.password == password)
+        if(u.username==username
+            &&
+            u.password==password)
         {
-            currentUser = username;
+            currentUser=username;
+
             lastError.clear();
+
             return true;
         }
     }
-    lastError = "账号或密码错误";
+
+    lastError="账号或密码错误";
+
     return false;
 }
 
@@ -447,28 +481,77 @@ QString FileSystem::searchFile(QString filename)
 
 void FileSystem::saveUsersToFile()
 {
-    QFile f("data/users.txt");
-    if(!f.open(QIODevice::WriteOnly|QIODevice::Text)) return;
-    QTextStream out(&f);
-    for(auto &u : users)
+    QString filePath =
+        QCoreApplication::applicationDirPath()
+        + "/data/users.txt";
+
+    QFile f(filePath);
+
+    if(!f.open(
+            QIODevice::WriteOnly
+            |QIODevice::Text
+            |QIODevice::Truncate))
     {
-        out << u.username << " " << u.password << "\n";
+        lastError="用户保存失败";
+        return;
     }
+
+    QTextStream out(&f);
+
+    for(auto &u:users)
+    {
+        out
+            <<u.username
+            <<" "
+            <<u.password
+            <<"\n";
+    }
+
     f.close();
 }
 
 void FileSystem::loadUsersFromFile()
 {
-    QFile f("data/users.txt");
-    if(!f.open(QIODevice::ReadOnly|QIODevice::Text)) return;
+    users.clear();
+
+    QString filePath =
+        QCoreApplication::applicationDirPath()
+        + "/data/users.txt";
+
+    QFile f(filePath);
+
+    if(!f.open(
+            QIODevice::ReadOnly
+            |QIODevice::Text))
+    {
+        return;
+    }
+
     QTextStream in(&f);
+
     while(!in.atEnd())
     {
-        QString line = in.readLine();
-        QStringList lst = line.split(" ");
-        if(lst.size()>=2)
-            users.append(User(lst[0],lst[1]));
+        QString line =
+            in.readLine()
+                .trimmed();
+
+        if(line.isEmpty())
+            continue;
+
+        QStringList lst=
+            line.split(
+                " ",
+                Qt::SkipEmptyParts);
+
+        if(lst.size()<2)
+            continue;
+
+        users.append(
+            User(
+                lst[0],
+                lst[1]));
     }
+
     f.close();
 }
 
@@ -567,29 +650,43 @@ void FileSystem::loadDirectoryByPath(QString path)
 
 void FileSystem::saveFilesToFile()
 {
-    QFile f("data/files.txt");
+    QString filePath=
+        QCoreApplication::applicationDirPath()
+        +"/data/files.txt";
 
-    if(!f.open(QIODevice::WriteOnly | QIODevice::Text))
+    QFile f(filePath);
+
+    if(!f.open(
+            QIODevice::WriteOnly
+            |QIODevice::Text
+            |QIODevice::Truncate))
+    {
+        lastError="文件数据保存失败";
         return;
+    }
 
     QTextStream out(&f);
 
     saveDirectories(
-                root,
-                out,
-                "root");
+        root,
+        out,
+        "root");
 
     saveFilesInDirectory(
-                root,
-                out,
-                "root");
+        root,
+        out,
+        "root");
 
     f.close();
 }
 
 void FileSystem::loadFilesFromFile()
 {
-    QFile f("data/files.txt");
+    QString filePath=
+        QCoreApplication::applicationDirPath()
+        +"/data/files.txt";
+
+    QFile f(filePath);
     if(!f.open(QIODevice::ReadOnly|QIODevice::Text)) return;
     QTextStream in(&f);
     while(!in.atEnd())
