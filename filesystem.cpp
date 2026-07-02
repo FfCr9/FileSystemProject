@@ -1,6 +1,7 @@
 #include "filesystem.h"
 #include <QDir>
 #include <QCoreApplication>
+#include <QFileInfo>
 
 FileSystem::FileSystem()
 {
@@ -786,6 +787,12 @@ bool FileSystem::writeByFd( int fd, QString content)
 
 bool FileSystem::importTxt(QString sysFileName, QString localTxtPath)
 {
+    if(sysFileName.isEmpty())
+    {
+        QFileInfo info(localTxtPath);
+        sysFileName = info.fileName();
+    }
+
     QFile localFile(localTxtPath);
     if (!localFile.open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -793,6 +800,7 @@ bool FileSystem::importTxt(QString sysFileName, QString localTxtPath)
         return false;
     }
     QTextStream stream(&localFile);
+    stream.setCodec("UTF-8");
     QString content = stream.readAll();
     localFile.close();
 
@@ -824,6 +832,7 @@ bool FileSystem::exportTxt(QString sysFileName, QString localTxtPath)
         return false;
     }
     QTextStream stream(&outFile);
+    stream.setCodec("UTF-8");
     stream << content;
     outFile.close();
     lastError.clear();

@@ -122,7 +122,7 @@ QTextEdit{
           <item>
            <widget class="QPushButton" name="deleteBtn">
             <property name="text">
-             <string>删除</string>
+             <string>删除文件</string>
             </property>
            </widget>
           </item>
@@ -196,7 +196,7 @@ QTextEdit{
      <x>0</x>
      <y>0</y>
      <width>881</width>
-     <height>27</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>

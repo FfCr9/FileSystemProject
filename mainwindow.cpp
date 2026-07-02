@@ -94,6 +94,8 @@ MainWindow::MainWindow(
             }
 
             refreshList();
+            ui->contentEdit->clear();
+            ui->fileNameEdit->clear();
         });
 
     connect(
@@ -323,6 +325,12 @@ void MainWindow::importTxtFile()
         ui->fileNameEdit
             ->text();
 
+    if(filename.isEmpty())
+    {
+        QFileInfo fi(path);
+        filename = fi.fileName();
+    }
+
     if(!filesystem
              ->importTxt(
                  filename,
@@ -337,6 +345,7 @@ void MainWindow::importTxtFile()
     }
 
     refreshList();
+    ui->fileNameEdit->clear();
 }
 
 void MainWindow::exportTxtFile()
